@@ -19,6 +19,7 @@ main{max-width:900px;margin:0 auto;padding:20px}
 label{display:block;margin:12px 0 4px;font-weight:600}
 input,select,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #475569;background:#0b1220;color:var(--txt)}
 textarea{min-height:64px}
+input[type=number]{max-width:220px}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:640px){.row{grid-template-columns:1fr}}
 .catgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
@@ -38,174 +39,222 @@ textarea{min-height:64px}
 .err{color:#f87171;font-size:.9rem}
 small{color:var(--mut)}
 footer{text-align:center;color:var(--mut);padding:20px;font-size:.85rem}
-.hidden{display:none}
 </style>
 </head>
 <body>
 <header>
 <h1>Newgate University Minna — Next-Gen ERP-LMS Survey</h1>
 <p>Faculty of Computing &amp; IT · Cyber Security Science · Lead: <b>Abdullahi Baba Garba</b></p>
-<p>Goal: design a system the university <b>adopts</b>, not just a final-year project. ~10 min.</p>
+<p>Goal: design a system the university <b>adopts</b>, not just a final-year project. ~12 min. Answer only your category.</p>
 </header>
 <main>
 <div class="card"><div class="stepper" id="steps"></div><p><small id="slabel"></small></p></div>
 <div id="app"></div>
 </main>
-<footer>Anonymous by default · Phone/email only if you opt into the WhatsApp pilot · Data: requirements design only</footer>
+<footer>Phone/email only for WhatsApp pilot opt-in · Data: requirements design only · Retention 90–180 days</footer>
 <script>
-/* ---------- schema ---------- */
-const LIKERT = ["Strongly disagree","Disagree","Neutral","Agree","Strongly agree"];
-const CATS = {
+const LIKERT=["Strongly disagree","Disagree","Neutral","Agree","Strongly agree"];
+const FREQ=["Never","Rarely","Sometimes","Often","Always"];
+const CATS={
  student:{t:"Student",d:"UTME / DE / Transfer · 100L–400L + spillover"},
  staff:{t:"Staff / Lecturer",d:"Teaching, HOD, exams, supervision"},
- stakeholder:{t:"Stakeholder",d:"Management · Bursary · Admissions · HOD · Clinic · Library · ICT · Hostel"}
+ stakeholder:{t:"Stakeholder",d:"Management · Bursary · Admissions · Clinic · Library · ICT · Hostel"}
 };
-const DETAILS = {
+const DETAILS={
  student:[
-  ["full_name","Full name","text",1],["matric","Matric number","text",1],
+  ["full_name","Full name","text",1],["matric","Matric number (or JAMB reg if new)","text",1],
   ["faculty","Faculty","text",1],["dept","Department","text",1],
-  ["level","Level","select:100L,200L,300L,400L,Spillover",1],["cohort","Intake cohort","select:2026-Semester1,2026-Semester2,2025-Semester1,2025-Semester2,Other",1],
-  ["entry","Entry stream","select:UTME,Direct Entry,Transfer DE",1],["phone","WhatsApp number (pilot opt-in)","text",0],["email","Email (optional)","text",0]
+  ["level","Level","select:100L,200L,300L,400L,Spillover",1],
+  ["cohort","Intake cohort","select:2026-Semester1,2026-Semester2,2025-Semester1,2025-Semester2,Other",1],
+  ["entry","Entry stream","select:UTME,Direct Entry,Transfer DE",1],
+  ["carry_n","Failed (F) courses outstanding now","number:0-20",1],
+  ["cgpa_band","Current CGPA band","select:<1.00,1.00-1.49,1.50-2.49,2.50-3.49,3.50+,Prefer not to say",1],
+  ["device","Primary device","select:Android phone,iPhone,Laptop (personal),Lab PC,Borrowed",1],
+  ["internet","Main internet","select:MTN,Airtel,Glo,9mobile,Campus WiFi,None reliable",1],
+  ["phone","WhatsApp number (pilot opt-in)","text",0],["email","Email (optional)","text",0]
  ],
  staff:[
   ["full_name","Full name","text",1],["staff_id","Staff ID","text",1],
   ["faculty","Faculty","text",1],["dept","Department","text",1],
   ["rank","Rank / role","select:Lecturer,Senior Lecturer,HOD,Dean,Exam Officer,Non-academic,Other",1],
-  ["courses","Courses handled (comma-separated)","text",0],["phone","WhatsApp number (pilot opt-in)","text",0],["email","Email","text",0]
+  ["yrs","Years teaching/admin","number:0-40",1],["class_size","Largest class size taught","number:1-2000",1],
+  ["courses","Courses handled (comma-separated)","text",1],["phone","WhatsApp number (pilot opt-in)","text",0],["email","Email","text",1]
  ],
  stakeholder:[
-  ["full_name","Full name","text",1],["unit","Unit","select:Management,Bursary,Admissions,HOD Office,Clinic,Library,ICT,Hostel,Other",1],
-  ["title","Title / role","text",1],["phone","WhatsApp number (pilot opt-in)","text",0],["email","Official email","text",0]
+  ["full_name","Full name","text",1],
+  ["unit","Unit","select:Management,Bursary,Admissions,HOD Office,Clinic,Library,ICT,Hostel,Other",1],
+  ["title","Title / role","text",1],["yrs","Years in unit","number:0-40",1],
+  ["phone","WhatsApp number (pilot opt-in)","text",0],["email","Official email","text",1]
  ]
 };
-function likert(id,q){return {id,q,type:"likert"};}
-function text(id,q,req){return {id,q,type:"text",req:!!req};}
-function checks(id,q,opts){return {id,q,type:"checks",opts};}
-function rank(id,q){return {id,q,type:"text"};}
-const PAGES = {
+const likert=(id,q,req)=>({id,q,type:"likert",req:!!req});
+const text=(id,q,req)=>({id,q,type:"text",req:!!req});
+const checks=(id,q,opts,req)=>({id,q,type:"checks",opts,req:!!req});
+const num=(id,q,hint,req)=>({id,q,type:"num",hint,req:!!req});
+const freq=(id,q,req)=>({id,q,type:"freq",req:!!req});
+const sel=(id,q,opts,req)=>({id,q,type:"sel",opts,req:!!req});
+const PAGES={
  student:[
-  {t:"Campus reality — what fails today?",qs:[
-   checks("s_pain","Which tasks freeze or fail during rush? (tick all)",["Login freeze","Course registration lock","Fee payment failure","E-exam crash","Results delay","Exam/test permit delay","Timetable confusion","Attendance error","Assignment upload fail","Library queue","Clinic wait/records","Hostel allocation"]),
-   text("s_reg","Course registration: carryovers, prerequisites, level mix-ups? Give one example."),
-   text("s_fees","Fees today: how do you pay, and what goes wrong (queues, Remita, reconciliation)?"),
-   text("s_exam","E-exams/LMS: your device, internet, power reality?")]},
-  {t:"Sentiments — proposed solutions (1–5)",qs:[
-   likert("sol_zero","Zero-downtime portal during fee/exam rush would solve my biggest problem."),
-   likert("sol_carry","Automatic carryover pre-fill + prerequisite checks would make registration fairer."),
-   likert("sol_fees","Exact online billing with instant receipt (Paystack/Remita) would beat queuing at bursary."),
-   likert("sol_qr","QR exam/test permits on my phone (with portal backup) would end permit queues."),
-   likert("sol_lan","Portal + e-exams working on campus network during internet outages matters to me."),
-   likert("sol_wa","A WhatsApp assistant for results/fees/timetable/permits/attendance/assignments/library would make my life easier."),
-   likert("sol_ai","An AI tutor answering from my course handbooks (on WhatsApp/web) would help me learn."),
-   likert("sol_priv","I trust the system if clinic records are encrypted/isolated and staff only see what they need.")]},
-  {t:"WhatsApp + adoption",qs:[
-   rank("s_wa_rank","Rank most useful on WhatsApp (1=most): results, fees payment, timetable, exam/test permit, attendance, assignment upload, library reservation."),
-   text("s_trust","What single feature + what single guarantee (uptime, receipt, privacy) would make you trust this as THE university system?"),
-   text("s_fears","Concerns: wrong results/fees on chat, scams, data misuse? What would reassure you?")] }
+  {t:"1/5 Academic reality (quantified)",qs:[
+   freq("s_lock_freq","How often does course registration lock/fail you during rush?",1),
+   num("s_carry_block","How many times has a carryover/prerequisite blocked your registration? (0+)",0,1),
+   sel("s_result_wait","Days to see approved results after exams?",["Same week","2–4 weeks","1–3 months",">3 months","Never see them"],1),
+   freq("s_permit_issue","How often do exam/test permit queues delay you?",1),
+   text("s_reg_story","Worst registration story in 2 lines (course codes + what happened).",1)]},
+  {t:"2/5 Money reality",qs:[
+   sel("s_pay_how","How do you mostly pay fees?",["Bank branch queue","Remita online","Paystack/card transfer","Bursary counter","Someone pays for me"],1),
+   num("s_pay_fail","Failed/delayed fee payments in the last session? (0+)",0,1),
+   num("s_queue_hrs","Longest queue hours for fees/screening/permits? (0+)",0,1),
+   sel("s_receipt","How fast is your official receipt/proof available?",["Instant","Same day","Days","Weeks","Lost before"],1),
+   text("s_spill","If spillover: do you understand per-credit billing? What confuses you?")]},
+  {t:"3/5 Exams, timetable, campus services",qs:[
+   freq("s_exam_crash","E-exam freeze/crash experience?",0),
+   sel("s_power","Power during study/exam week?",["Stable","Fluctuating","Mostly outage","Generator-only"],0),
+   checks("s_wa_pain","Campus services that waste your time (tick all)",["Library search/reservation","Hostel allocation","Clinic check-in/records","Timetable clashes","Attendance errors","Assignment upload"],0),
+   text("s_timetable","Timetable pain in one line (clashes, late changes, venue)?")]},
+  {t:"4/5 Sentiments — proposed solutions (1=strongly disagree … 5=strongly agree)",qs:[
+   likert("sol_zero","Zero-downtime portal during fee/exam rush would solve my biggest problem.",1),
+   likert("sol_carry","Automatic carryover pre-fill + prerequisite checks would make registration fairer.",1),
+   likert("sol_fees","Exact online billing with instant verifiable receipt beats queuing.",1),
+   likert("sol_qr","QR exam/test permit on my phone + portal backup would end permit queues.",1),
+   likert("sol_lan","Campus-network exams/portal during internet outage matters to me.",1),
+   likert("sol_ai","AI tutor answering only from my course handbooks would help me learn.",1),
+   likert("sol_ai_cond","I would use the AI tutor if it cites the handbook page and says 'not in handbook' otherwise.",1),
+   likert("sol_priv","I trust the system if clinic records are encrypted/isolated and staff see only what they need.",1)]},
+  {t:"5/5 WhatsApp + adoption",qs:[
+   likert("wa_results","WhatsApp: checking results/CGPA is useful to me.",0),
+   likert("wa_fees","WhatsApp: fee balance + secure pay-link is useful to me.",0),
+   likert("wa_permit","WhatsApp: exam/test permit QR is useful to me.",0),
+   likert("wa_assign","WhatsApp: assignment upload + deadline reminders are useful to me.",0),
+   likert("wa_library","WhatsApp: library search/reserve/renew is useful to me.",0),
+   text("s_trust","Single feature + single guarantee (uptime/receipt/privacy) that earns your trust?",1),
+   text("s_fears","Concerns (scams, wrong data on chat, misuse)? What reassurance do you need?")]}
  ],
  staff:[
-  {t:"Teaching & admin load",qs:[
-   text("t_att","Attendance + assignments today (paper/Excel/portal)? Biggest friction?"),
-   text("t_res","Results processing, carryover lists, probation decisions — what breaks?"),
-   text("t_waiver","Transfer/DE waivers & HOD approvals — describe the paper trail."),
-   text("t_exam","E-exam setting, virtual class, timetable clashes?")]},
-  {t:"Sentiments — proposed solutions (1–5)",qs:[
-   likert("sol_zero","Zero-downtime during e-exams/registration would restore my confidence in the portal."),
-   likert("sol_carry","Enforced carryover + prerequisite logic would cut my results disputes."),
-   likert("sol_ai_staff","AI that drafts outlines/quizzes/rubrics from my handouts would save real hours."),
-   likert("sol_wa_staff","Marking attendance and tracking submissions via WhatsApp + portal would beat paper."),
-   likert("sol_permit","QR permits verified offline would shorten my exam-day queues."),
-   likert("sol_sec","Encrypted clinic isolation + full audit trail would satisfy my exam/records integrity needs.")]},
-  {t:"Adoption",qs:[
-   text("t_adopt","Condition: what must hold (accuracy, training, support, workload) for you to run your course fully on this?"),
-   text("t_train","Training format you need (hands-on lab, video, manual, WhatsApp helpdesk)?")] }
+  {t:"1/5 Teaching profile & load",qs:[
+   num("t_courses_n","Courses handled per session? (count)",0,1),
+   num("t_students_n","Total students across your courses? (approx)",0,1),
+   sel("t_att_how","Attendance method today?",["Paper register","Excel","Portal","WhatsApp group","No tracking"],1),
+   num("t_att_hrs","Hours per week on attendance/assignment admin? (0+)",0,1),
+   num("t_disputes","Result/carryover disputes per session? (0+)",0,1)]},
+  {t:"2/5 Results, waivers, exams",qs:[
+   text("t_res_break","Results pipeline: where does it break (collation, carryover lists, probation)?",1),
+   num("t_waiver_n","Transfer/DE waiver cases per session? (0+)",0,0),
+   text("t_waiver_pain","Waiver/HOD approval paper trail in 2 lines.",0),
+   freq("t_exam_fail","E-exam/virtual-class failure rate in your courses?",0),
+   text("t_clash","Timetable/venue clash example?")]},
+  {t:"3/5 Sentiments — proposed solutions",qs:[
+   likert("sol_zero_t","Zero-downtime during e-exams/registration would restore my portal confidence.",1),
+   likert("sol_carry_t","Enforced carryover + prerequisite logic would cut my disputes.",1),
+   likert("sol_ai_staff","AI drafts (outline/quiz/rubric) from MY handouts would save real hours.",1),
+   likert("sol_ai_cond_t","I accept AI drafts only if I approve/edit before students see them.",1),
+   likert("sol_wa_staff","Attendance + submissions via WhatsApp + portal beats paper.",1),
+   likert("sol_permit_t","Offline-verifiable QR permits would shorten exam-day queues.",1),
+   likert("sol_sec_t","Audit trail on every result/fee change meets my integrity needs.",1)]},
+  {t:"4/5 Workload & integrity conditions",qs:[
+   likert("t_willing","I will run my course fully on the new system if my first session is error-free.",0),
+   sel("t_train","Training I need?",["Hands-on lab","Video + manual","WhatsApp helpdesk","Department champion"],0),
+   text("t_adopt","Non-negotiable condition for adoption (accuracy, support, workload)?",1)]}
  ],
  stakeholder:[
-  {t:"Operations, money, compliance",qs:[
-   text("m_fin","Fee reconciliation + spillover per-credit billing pain today?"),
-   text("m_adm","Admissions (UTME/DE/Transfer-DE), transcript waivers, matric numbering — issues?"),
-   text("m_nuc","NUC: probation, spillover 1.5× cap, Senate review — what is still manual?"),
-   text("m_uptime","Downtime cost during fee/exam rush? Uptime you need in writing?")]},
-  {t:"Sentiments — proposed solutions (1–5)",qs:[
-   likert("sol_zero_m","Isolated microservices surviving fee/exam spikes meets my availability requirement."),
-   likert("sol_nuc","Automated cohort/probation/spillover/Senate-flag logic would make us NUC-audit ready."),
-   likert("sol_money","Decimal-exact ledgers + idempotent webhooks + instant receipts would close my reconciliation gaps."),
-   likert("sol_cia","AES-256 clinic isolation + RBAC + audit + breach alerts meets my confidentiality/integrity bar."),
-   likert("sol_sre","Read-only AI diagnosis of outages + 90–180d log retention meets my oversight needs.")]},
-  {t:"Reports + adoption",qs:[
-   text("m_reports","Reports you need weekly (debtors, enrolment, probation list, permits)?"),
-   text("m_adopt","What proof (pilot scope, SLA, training, cost, data ownership) gets Senate to approve university-wide rollout?"),
-   text("m_risk","Top 3 rollout risks (power, network, staff buy-in, fees) + your mitigation demand?")] }
+  {t:"1/4 Unit operations (answer YOUR unit block)",qs:[
+   text("b_rec","BURSARY only: reconciliation cycle + volumes + top failure.",0),
+   text("a_vol","ADMISSIONS only: intake volumes per stream (UTME/DE/Transfer) + matric collisions?",0),
+   text("h_wav","HOD only: waiver/approval volumes + delays?",0),
+   text("c_rec","CLINIC only: records volume + privacy red lines?",0),
+   text("l_vol","LIBRARY/ICT/HOSTEL only: tracking pain + volumes?",0),
+   num("m_downtime_n","Fee/exam-rush outages last session? (count)",0,1)]},
+  {t:"2/4 NUC, money, reports",qs:[
+   text("m_nuc","NUC: probation/spillover 1.5×/Senate review — what is manual today?",1),
+   text("m_spill","Spillover billing: how computed today, dispute rate?",0),
+   text("m_reports","Weekly reports you need (debtors, enrolment, probation, permits)?",1),
+   sel("m_recon","Fee reconciliation time today?",["Same day","Days","Weeks","Month-end only","Unknown"],0)]},
+  {t:"3/4 Sentiments — architecture",qs:[
+   likert("sol_zero_m","Isolated services surviving spikes meets my availability bar.",1),
+   likert("sol_nuc_m","Automated cohort/probation/spillover/Senate flags = audit-ready.",1),
+   likert("sol_money_m","Decimal-exact + idempotent receipts closes reconciliation.",1),
+   likert("sol_cia_m","AES-256 clinic isolation + RBAC + audit + breach alerts meets my bar.",1),
+   likert("sol_sre_m","Read-only AI diagnosis + 90–180d logs meets oversight.",1),
+   likert("sol_wa_m","WhatsApp channel with signed links (never raw money data in chat) is acceptable.",1)]},
+  {t:"4/4 Adoption decision",qs:[
+   text("m_adopt","Proof needed for Senate approval (pilot scope, SLA, cost, data ownership)?",1),
+   text("m_risk","Top 3 rollout risks + mitigation you demand?",1),
+   num("m_users","Users in your unit needing accounts? (approx)",0,0)]}
  ]
 };
-/* ---------- wizard ---------- */
-let S = {cat:null, page:-1, details:{}, answers:{}};
-const app = document.getElementById('app'), stepsEl = document.getElementById('steps'), slabel = document.getElementById('slabel');
-function totalSteps(){ return S.cat ? PAGES[S.cat].length + 2 : 1; }
+let S={cat:null,page:-1,details:{},answers:{}};
+const app=document.getElementById('app'),stepsEl=document.getElementById('steps'),slabel=document.getElementById('slabel');
+function totalSteps(){return S.cat?PAGES[S.cat].length+2:1;}
 function drawSteps(){
- const n = totalSteps(), cur = S.page + 1;
- stepsEl.innerHTML = ""; for(let i=0;i<n;i++){const d=document.createElement('div'); if(i<=cur)d.className="on"; stepsEl.appendChild(d);}
- const names = S.cat ? ["Category","Your details",...PAGES[S.cat].map(p=>p.t),"Done"] : ["Category"];
- slabel.textContent = `Step ${Math.min(cur+1,n)} of ${n} — ${names[Math.min(cur+1,n-1)]||names[0]}`;
+ const n=totalSteps(),cur=S.page+1; stepsEl.innerHTML="";
+ for(let i=0;i<n;i++){const d=document.createElement('div');if(i<=cur)d.className="on";stepsEl.appendChild(d);}
+ const names=S.cat?["Category","Your details",...PAGES[S.cat].map(p=>p.t),"Done"]:["Category"];
+ slabel.textContent=`Step ${Math.min(cur+1,n)} of ${n} — ${names[Math.min(cur+1,n-1)]||names[0]}`;
 }
-function esc(s){return (s||"").replace(/"/g,"&quot;");}
+const esc=s=>(s||"").replace(/"/g,"&quot;");
 function vCategory(){
- app.innerHTML = `<div class="card"><h2>I am a… (select one)</h2><div class="catgrid">${
+ app.innerHTML=`<div class="card"><h2>I am a… (select one)</h2><div class="catgrid">${
   Object.entries(CATS).map(([k,c])=>`<button data-c="${k}" class="${S.cat===k?'sel':''}">${c.t}<small>${c.d}</small></button>`).join("")
- }</div><p class="err" id="e"></p><div class="actions"><button class="primary" id="nx">Continue →</button></div></div>`;
- app.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{S.cat=b.dataset.c;S.page=-1;vCategory();});
- nx.onclick=()=>{ if(!S.cat){e.textContent="Please select your category.";return;} S.page=0; vDetails(); };
+ }</div><p class="err" id="e"></p><div class="actions"><button class="primary" id="nx">Continue →</button></div>
+ <p><small>Students ~25 items · Staff ~20 · Stakeholders ~18. Required items are marked *.</small></p></div>`;
+ app.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{S.cat=b.dataset.c;S.page=-1;S.details={};S.answers={};vCategory();});
+ nx.onclick=()=>{if(!S.cat){e.textContent="Please select your category.";return;}S.page=0;vDetails();};
  drawSteps();
 }
 function vDetails(){
- const f = DETAILS[S.cat];
- app.innerHTML = `<div class="card"><h2>Your details — ${CATS[S.cat].t}</h2><div class="row">${f.map(([k,l,t,r])=>{
-  let inp = t.startsWith("select:") ? `<select data-k="${k}"><option value="">— select —</option>${t.slice(7).split(",").map(o=>`<option ${S.details[k]===o?'selected':''}>${o}</option>`).join("")}</select>`
-   : `<input data-k="${k}" value="${esc(S.details[k]||'')}" placeholder="${esc(l)}" />`;
+ const f=DETAILS[S.cat];
+ app.innerHTML=`<div class="card"><h2>Your details — ${CATS[S.cat].t}</h2><div class="row">${f.map(([k,l,t,r])=>{
+  let inp;
+  if(t.startsWith("select:")) inp=`<select data-k="${k}"><option value="">— select —</option>${t.slice(7).split(",").map(o=>`<option ${S.details[k]===o?'selected':''}>${o}</option>`).join("")}</select>`;
+  else if(t.startsWith("number:")) inp=`<input type="number" data-k="${k}" min="${t.slice(7).split("-")[0]}" max="${t.slice(7).split("-")[1]}" value="${esc(S.details[k]||'')}" />`;
+  else inp=`<input data-k="${k}" value="${esc(S.details[k]||'')}" placeholder="${esc(l)}" />`;
   return `<div><label class="${r?'req':''}">${l}</label>${inp}</div>`;}).join("")}</div>
  <p class="err" id="e"></p><div class="actions"><button class="ghost" id="bk">← Back</button><button class="primary" id="nx">Continue →</button></div></div>`;
  app.querySelectorAll('[data-k]').forEach(el=>el.oninput=()=>{S.details[el.dataset.k]=el.value;});
  bk.onclick=()=>vCategory();
  nx.onclick=()=>{
-  const missing = f.filter(([k,l,t,r])=>r && !(S.details[k]||"").trim());
+  const missing=f.filter(([k,l,,r])=>r&&!(S.details[k]||"").trim());
   if(missing.length){e.textContent="Required: "+missing.map(m=>m[1]).join(", ");return;}
-  S.page=1; vPage();
- };
+  // numeric sanity
+  for(const [k,l,t] of f){ if(t.startsWith("number:")&&S.details[k]!==""&&isNaN(+S.details[k])){e.textContent=l+" must be a number.";return;} }
+  S.page=1;vPage();};
  drawSteps();
 }
+function qhtml(q){
+ const v=S.answers[q.id];
+ if(q.type==="likert") return `<label class="${q.req?'req':''}">${q.q}</label><div class="scale">${LIKERT.map((l,i)=>`<button data-q="${q.id}" data-v="${i+1}" class="${v==i+1?'sel':''}">${i+1}<br><small>${l.split(" ")[0]}</small></button>`).join("")}</div>`;
+ if(q.type==="freq") return `<label class="${q.req?'req':''}">${q.q}</label><select data-qq="${q.id}"><option value="">— select —</option>${FREQ.map(o=>`<option ${v===o?'selected':''}>${o}</option>`).join("")}</select>`;
+ if(q.type==="sel") return `<label class="${q.req?'req':''}">${q.q}</label><select data-qq="${q.id}"><option value="">— select —</option>${q.opts.map(o=>`<option ${v===o?'selected':''}>${o}</option>`).join("")}</select>`;
+ if(q.type==="num") return `<label class="${q.req?'req':''}">${q.q}</label><input type="number" min="0" data-qq="${q.id}" value="${esc(v??'')}" />`;
+ if(q.type==="checks") return `<label class="${q.req?'req':''}">${q.q}</label><div class="chk">${q.opts.map(o=>`<label><input type="checkbox" data-q="${q.id}" value="${o}" ${(v||[]).includes(o)?'checked':''} style="width:auto;margin-right:8px"/>${o}</label>`).join("")}</div>`;
+ return `<label class="${q.req?'req':''}">${q.q}</label><textarea data-qq="${q.id}">${esc(v||"")}</textarea>`;
+}
 function vPage(){
- const idx = S.page - 1, pages = PAGES[S.cat];
- if(idx >= pages.length) return vDone();
- const p = pages[idx];
- app.innerHTML = `<div class="card"><h2>${p.t}</h2>${p.qs.map(q=>{
-  const v = S.answers[q.id];
-  if(q.type==="likert") return `<label>${q.q}</label><div class="scale">${LIKERT.map((l,i)=>`<button data-q="${q.id}" data-v="${i+1}" class="${v==i+1?'sel':''}">${i+1}<br><small>${l.split(" ")[0]}</small></button>`).join("")}</div>`;
-  if(q.type==="checks") return `<label>${q.q}</label><div class="chk">${q.opts.map(o=>`<label><input type="checkbox" data-q="${q.id}" value="${o}" ${(v||[]).includes(o)?'checked':''} style="width:auto;margin-right:8px"/>${o}</label>`).join("")}</div>`;
-  return `<label>${q.q}</label><textarea data-q="${q.id}">${esc(v||"")}</textarea>`;}).join("")}
+ const idx=S.page-1,pages=PAGES[S.cat];
+ if(idx>=pages.length) return vDone();
+ const p=pages[idx];
+ app.innerHTML=`<div class="card"><h2>${p.t}</h2><p><small>${p.qs.length} questions · * required</small></p>${p.qs.map(qhtml).join("")}
  <p class="err" id="e"></p><div class="actions"><button class="ghost" id="bk">← Back</button><button class="primary" id="nx">${idx===pages.length-1?"Review →":"Continue →"}</button></div></div>`;
- app.querySelectorAll('[data-q]').forEach(el=>{
-  if(el.tagName==="BUTTON") el.onclick=()=>{S.answers[el.dataset.q]=+el.dataset.v; vPage();};
-  else if(el.type==="checkbox") el.onchange=()=>{
-   const k=el.dataset.q; S.answers[k]=S.answers[k]||[];
-   el.checked ? S.answers[k].push(el.value) : S.answers[k]=S.answers[k].filter(x=>x!==el.value);};
-  else el.oninput=()=>{S.answers[el.dataset.q]=el.value;};
- });
- bk.onclick=()=>{ S.page--; S.page===0 ? vDetails() : vPage(); };
- nx.onclick=()=>{ S.page++; vPage(); };
+ app.querySelectorAll('[data-q]').forEach(el=>{ if(el.tagName==="BUTTON") el.onclick=()=>{S.answers[el.dataset.q]=+el.dataset.v;vPage();};});
+ app.querySelectorAll('input[type=checkbox][data-q]').forEach(el=>el.onchange=()=>{const k=el.dataset.q;S.answers[k]=S.answers[k]||[];el.checked?S.answers[k].push(el.value):S.answers[k]=S.answers[k].filter(x=>x!==el.value);});
+ app.querySelectorAll('[data-qq]').forEach(el=>el.oninput=()=>{S.answers[el.dataset.qq]=el.value;});
+ bk.onclick=()=>{S.page--;S.page===0?vDetails():vPage();};
+ nx.onclick=()=>{
+  const missing=p.qs.filter(q=>q.req&&(S.answers[q.id]===undefined||S.answers[q.id]===""||(Array.isArray(S.answers[q.id])&&!S.answers[q.id].length)));
+  if(missing.length){e.textContent="Please answer required: "+missing.map(m=>m.id).join(", ");return;}
+  S.page++;vPage();};
  drawSteps();
 }
 function vDone(){
- const rows = [...Object.entries(S.details).map(([k,v])=>`<div><b>${k}</b><br>${esc(v)||"—"}</div>`),
+ const rows=[...Object.entries(S.details).map(([k,v])=>`<div><b>${k}</b><br>${esc(v)||"—"}</div>`),
   ...Object.entries(S.answers).map(([k,v])=>`<div><b>${k}</b><br>${esc(Array.isArray(v)?v.join(", "):String(v))||"—"}</div>`)];
- app.innerHTML = `<div class="card"><h2>Review & submit</h2><p><small>Category: <b>${CATS[S.cat].t}</b> · Stored in this browser + exportable. Backend POST hook ready at <code>/api/v1/survey</code>.</small></p>
+ app.innerHTML=`<div class="card"><h2>Review & submit</h2><p><small>Category: <b>${CATS[S.cat].t}</b> · ${Object.keys(S.answers).length} answers · Stored in browser + exportable. Backend POST <code>/api/v1/survey</code> ready later.</small></p>
  <div class="row">${rows.join("")}</div>
  <div class="actions"><button class="ghost" id="bk">← Back</button><button class="primary" id="sv">Save response</button><button class="ghost" id="cs">Export CSV</button><button class="ghost" id="js">Export JSON</button></div><p><small id="m"></small></p></div>`;
- bk.onclick=()=>{S.page=PAGES[S.cat].length; vPage();};
- sv.onclick=()=>{ const all=JSON.parse(localStorage.getItem('num_surveys')||'[]');
-  all.push({cat:S.cat,...S.details,answers:S.answers,at:new Date().toISOString()});
-  localStorage.setItem('num_surveys',JSON.stringify(all)); m.textContent=`Saved locally (${all.length} on this device). Export CSV/JSON to submit.`; };
+ bk.onclick=()=>{S.page=PAGES[S.cat].length;vPage();};
+ sv.onclick=()=>{const all=JSON.parse(localStorage.getItem('num_surveys')||'[]');all.push({cat:S.cat,...S.details,answers:S.answers,at:new Date().toISOString()});localStorage.setItem('num_surveys',JSON.stringify(all));m.textContent=`Saved locally (${all.length} on this device). Export CSV/JSON to submit.`;};
  const dl=(n,t,ty)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:ty}));a.download=n;a.click();};
- cs.onclick=()=>{const all=JSON.parse(localStorage.getItem('num_surveys')||'[]'); if(!all.length)return m.textContent='Nothing saved yet.';
+ cs.onclick=()=>{const all=JSON.parse(localStorage.getItem('num_surveys')||'[]');if(!all.length)return m.textContent='Nothing saved yet.';
   const keys=[...new Set(all.flatMap(o=>Object.keys(o)))];
   dl('newgate_survey.csv',[keys.join(','),...all.map(o=>keys.map(k=>`"${String(typeof o[k]==='object'?JSON.stringify(o[k]):o[k]??'').replace(/"/g,'""')}"`).join(','))].join('\n'),'text/csv');};
  js.onclick=()=>dl('newgate_survey.json',localStorage.getItem('num_surveys')||'[]','application/json');
