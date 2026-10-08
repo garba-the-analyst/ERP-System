@@ -1,0 +1,10 @@
+target/
+dist/
+node_modules/
+.env
+*.log
+.ollama/
+data/postgres*
+data/redis*
+data/rabbit*
+data/mongo*

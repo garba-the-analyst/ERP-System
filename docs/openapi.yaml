@@ -1,0 +1,30 @@
+openapi: 3.0.3
+info: {title: Newgate ERP-LMS frozen API, version: 1.0.0}
+paths:
+  /health: {get: {responses: {'200': {description: ok}}}}
+  /ready: {get: {responses: {'200': {description: ready}}}}
+  /validate-registration:
+    post:
+      summary: FR-2.2 carryover lock + FR-2.3 prereq check
+      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
+      responses: {'200': {description: valid + locked_carryovers}}
+  /standing:
+    post:
+      summary: FR-2.4 CGPA/spillover/Senate
+      responses: {'200': {description: AcademicStanding}}
+  /matric/next:
+    post:
+      summary: FR-3.3 sequential matric
+      responses: {'200': {description: matric}}
+  /webhook:
+    post:
+      summary: FR-4.3 raw-body HMAC-SHA512, headers x-paystack-signature/x-remita-signature
+      responses: {'200': {description: ack}, '401': {description: bad sig}}
+  /score:
+    post:
+      summary: FR-5.3 risk scores
+      responses: {'200': {description: '[{risk_score, threat_type, affected_endpoint, recommended_action}]'}}
+  /wa/inbound:
+    post:
+      summary: Baileys bridge -> whatsapp-service (pilot single number, WA_PROVIDER seam)
+      responses: {'200': {description: queued}}

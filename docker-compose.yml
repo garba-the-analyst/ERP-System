@@ -1,0 +1,62 @@
+services:
+  postgres-main:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: erp
+      POSTGRES_PASSWORD: erp_pw
+      POSTGRES_DB: erp_main
+    volumes:
+      - pgmain:/var/lib/postgresql/data
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U erp"]
+      interval: 5s
+      retries: 10
+
+  # Isolated clinic DB per NFR-3 / SRS 2.5 — separate volume, separate creds, no shared network alias
+  postgres-hospital:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: clinic
+      POSTGRES_PASSWORD: clinic_pw
+      POSTGRES_DB: erp_clinic
+    volumes:
+      - pghosp:/var/lib/postgresql/data
+    ports: ["5433:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clinic"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    volumes: [redisdata:/data]
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: erp
+      RABBITMQ_DEFAULT_PASS: erp_pw
+    ports: ["5672:5672", "15672:15672"]
+
+  mongodb:
+    image: mongo:7
+    ports: ["27017:27017"]
+    volumes: [mongodata:/data/db]
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ai"]
+    ports: ["11434:11434"]
+    volumes: [ollama:/root/.ollama]
+    # On 8GB box: run ONE model at a time. Pull via:
+    # docker exec <ollama> ollama pull llama3.2:3b
+    # docker exec <ollama> ollama pull qwen2.5:1.5b
+
+volumes:
+  pgmain:
+  pghosp:
+  redisdata:
+  mongodata:
+  ollama:

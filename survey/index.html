@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Newgate University ERP-LMS — Stakeholder Requirements Survey</title>
+<style>
+:root { --bg:#0f172a; --card:#1e293b; --acc:#22c55e; --txt:#e2e8f0; --mut:#94a3b8; }
+* { box-sizing:border-box; font-family: system-ui, Segoe UI, Roboto, sans-serif; }
+body { margin:0; background:var(--bg); color:var(--txt); }
+header { padding:28px 20px; text-align:center; border-bottom:1px solid #334155; }
+header h1 { margin:0 0 6px; font-size:1.5rem; }
+header p { margin:4px 0; color:var(--mut); }
+main { max-width:860px; margin:0 auto; padding:20px; }
+.card { background:var(--card); border:1px solid #334155; border-radius:12px; padding:18px; margin:14px 0; }
+label { display:block; margin:10px 0 4px; font-weight:600; }
+input, select, textarea { width:100%; padding:10px; border-radius:8px; border:1px solid #475569; background:#0b1220; color:var(--txt); }
+textarea { min-height:70px; }
+.row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+@media(max-width:640px){ .row{grid-template-columns:1fr;} }
+.role-tabs { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+.role-tabs button { flex:1; min-width:140px; padding:12px; border-radius:10px; border:1px solid #475569; background:#0b1220; color:var(--txt); cursor:pointer; font-weight:700; }
+.role-tabs button.active { background:var(--acc); color:#052e16; border-color:var(--acc); }
+.hidden { display:none; }
+.actions { display:flex; gap:10px; flex-wrap:wrap; margin:16px 0; }
+.actions button, .actions a { padding:12px 16px; border-radius:10px; border:0; cursor:pointer; font-weight:700; text-decoration:none; }
+.primary { background:var(--acc); color:#052e16; }
+.ghost { background:#334155; color:var(--txt); }
+small { color:var(--mut); }
+.progress { height:8px; background:#334155; border-radius:99px; overflow:hidden; }
+.progress > div { height:100%; background:var(--acc); width:0; }
+footer { text-align:center; color:var(--mut); padding:20px; font-size:.85rem; }
+</style>
+</head>
+<body>
+<header>
+<h1>Newgate University Minna — Next-Gen ERP-LMS</h1>
+<p>Faculty of Computing &amp; IT · Dept. of Cyber Security Science · Lead: <b>Abdullahi Baba Garba</b></p>
+<p>Purpose: gather real pain-points so this system is <b>adopted university-wide</b>, not just a final-year project.</p>
+<p><small>Time: ~7 min · Anonymous by default · Phone only if you opt into the WhatsApp pilot</small></p>
+</header>
+<main>
+<div class="card">
+<div class="progress"><div id="bar"></div></div>
+<p><small id="pcount">0% complete</small></p>
+<div class="role-tabs" role="tablist">
+<button data-role="student" class="active">Student</button>
+<button data-role="staff">Staff / Lecturer</button>
+<button data-role="stakeholder">Management / Bursary / Admissions / HOD / Clinic / Library / ICT</button>
+</div>
+<div class="row">
+<div><label>Faculty</label><input id="faculty" placeholder="e.g. Computing & IT" /></div>
+<div><label>Department / Unit</label><input id="dept" placeholder="e.g. Cyber Security Science" /></div>
+</div>
+<div class="row">
+<div><label>Level / Rank (optional)</label><input id="level" placeholder="e.g. 200L / Lecturer II / HOD" /></div>
+<div><label>WhatsApp number — pilot opt-in only (optional)</label><input id="phone" placeholder="+234 ..." /></div>
+</div>
+</div>
+
+<!-- STUDENT -->
+<section class="card" data-section="student">
+<h2>Students — your daily reality</h2>
+<label>1. Which portal tasks freeze or fail during rush (fees deadline / registration / e-exams)? (tick all)</label>
+<div id="s_pain"></div>
+<label>2. Course registration: carryovers, prerequisites, level mix-ups?</label>
+<textarea data-q="s_reg" placeholder="e.g. CSC101 carryover blocked my 200L registration..."></textarea>
+<label>3. How do you pay fees today, and what goes wrong?</label>
+<textarea data-q="s_fees" placeholder="Bank / Remita / Paystack / queue at bursary..."></textarea>
+<label>4. Results &amp; permits: how fast do you get results / exam permits?</label>
+<textarea data-q="s_results" placeholder=""></textarea>
+<label>5. E-exams + LMS: device, internet, power reality?</label>
+<textarea data-q="s_exam" placeholder="e.g. Android phone, hostel WiFi drops, ..."></textarea>
+<label>6. Library / hostel / clinic in one line each — what wastes your time?</label>
+<textarea data-q="s_campus" placeholder=""></textarea>
+<label>7. WhatsApp assistant — rank most useful (1=most): results, fees, timetable, permits, attendance, assignments, library</label>
+<textarea data-q="s_wa" placeholder="e.g. 1-permits 2-fees 3-timetable ..."></textarea>
+<label>8. AI tutor: would you use course-handbook Q&amp;A on WhatsApp/web? Concerns?</label>
+<textarea data-q="s_ai" placeholder=""></textarea>
+<label>9. What single feature would make you trust this as THE university system?</label>
+<textarea data-q="s_killer" placeholder=""></textarea>
+</section>
+
+<!-- STAFF -->
+<section class="card hidden" data-section="staff">
+<h2>Staff — teaching &amp; admin load</h2>
+<label>1. Attendance + assignments today (paper / Excel / portal)? Biggest friction?</label>
+<textarea data-q="t_att" placeholder=""></textarea>
+<label>2. Results processing &amp; carryover lists — what breaks?</label>
+<textarea data-q="t_res" placeholder=""></textarea>
+<label>3. Transfer / Direct-Entry waivers &amp; HOD approvals?</label>
+<textarea data-q="t_waiver" placeholder=""></textarea>
+<label>4. E-exam setting, virtual class, timetable clashes?</label>
+<textarea data-q="t_exam" placeholder=""></textarea>
+<label>5. What should the WhatsApp assistant do for you? (attendance by chat, submissions digest, broadcasts...)</label>
+<textarea data-q="t_wa" placeholder=""></textarea>
+<label>6. AI co-pilot: quiz/rubric generation from your handouts — useful? fears?</label>
+<textarea data-q="t_ai" placeholder=""></textarea>
+<label>7. Adoption condition: what must hold for you to run your course fully on this?</label>
+<textarea data-q="t_adopt" placeholder=""></textarea>
+</section>
+
+<!-- STAKEHOLDER -->
+<section class="card hidden" data-section="stakeholder">
+<h2>Stakeholders — operations, money, compliance</h2>
+<label>1. Your unit &amp; role</label>
+<input data-q="m_unit" placeholder="e.g. Bursary — reconciliation officer" />
+<label>2. Fee reconciliation + spillover billing pain today?</label>
+<textarea data-q="m_fin" placeholder=""></textarea>
+<label>3. Admissions streams (UTME / DE / Transfer-DE) + matric numbering issues?</label>
+<textarea data-q="m_adm" placeholder=""></textarea>
+<label>4. NUC compliance: probation, spillover caps (1.5×), Senate review — what's manual?</label>
+<textarea data-q="m_nuc" placeholder=""></textarea>
+<label>5. Downtime cost during fee/exam rush? Uptime you need?</label>
+<textarea data-q="m_uptime" placeholder=""></textarea>
+<label>6. Security/privacy red lines (clinic isolation, who sees what, breach alerts, audit)?</label>
+<textarea data-q="m_sec" placeholder=""></textarea>
+<label>7. Reports you need weekly (debtors, enrolment, probation list...)?</label>
+<textarea data-q="m_reports" placeholder=""></textarea>
+<label>8. Adoption: what proof (pilot scope, SLA, training, cost) gets Senate to approve university-wide rollout?</label>
+<textarea data-q="m_adopt" placeholder=""></textarea>
+</section>
+
+<div class="card">
+<h2>Submit</h2>
+<p><small>Stored in this browser + downloadable. Use Export CSV/JSON to send to the project team. Online POST hook ready at <code>/api/v1/survey</code> when backend lands.</small></p>
+<div class="actions">
+<button class="primary" id="save">Save response</button>
+<button class="ghost" id="csv">Export CSV</button>
+<button class="ghost" id="json">Export JSON</button>
+<a class="ghost" href="README.md" target="_blank">Hosting guide</a>
+</div>
+<p><small id="msg"></small></p>
+</div>
+</main>
+<footer>Data use: requirements design only · Contact: Faculty of Computing &amp; IT, Newgate University Minna</footer>
+<script>
+const PAINS = ["Login freeze","Course registration lock","Fee payment failure","E-exam crash","Results delay","Exam permit delay","Timetable confusion","Attendance error","Assignment upload fail","Library queue","Clinic records","Hostel allocation"];
+const wrap = document.getElementById('s_pain');
+PAINS.forEach(p=>{ const l=document.createElement('label'); l.style.fontWeight='400';
+l.innerHTML=`<input type="checkbox" value="${p}" style="width:auto;margin-right:8px"/>${p}`; wrap.appendChild(l); });
+let role='student';
+document.querySelectorAll('.role-tabs button').forEach(b=>b.onclick=()=>{
+ role=b.dataset.role;
+ document.querySelectorAll('.role-tabs button').forEach(x=>x.classList.remove('active'));
+ b.classList.add('active');
+ document.querySelectorAll('[data-section]').forEach(s=>s.classList.toggle('hidden', s.dataset.section!==role));
+ update();
+});
+function collect(){
+ const d={role, faculty:faculty.value, dept:dept.value, level:level.value, phone:phone.value, at:new Date().toISOString(), pains:[...wrap.querySelectorAll('input:checked')].map(i=>i.value), answers:{}};
+ document.querySelectorAll(`[data-section="${role}"] [data-q]`).forEach(el=>d.answers[el.dataset.q]=el.value);
+ return d;
+}
+function update(){
+ const d=collect(); const total=document.querySelectorAll(`[data-section="${role}"] [data-q]`).length||1;
+ const filled=document.querySelectorAll(`[data-section="${role}"] [data-q]`).filter ? 0 : 0;
+ let n=Object.values(d.answers).filter(v=>v&&v.trim()).length + (d.faculty?1:0) + (d.dept?1:0);
+ const pct=Math.min(100, Math.round(n/(total+2)*100)); bar.style.width=pct+'%'; pcount.textContent=pct+'% complete';
+}
+document.querySelectorAll('input,textarea').forEach(el=>el.oninput=update);
+save.onclick=()=>{
+ const d=collect(); const all=JSON.parse(localStorage.getItem('num_surveys')||'[]'); all.push(d);
+ localStorage.setItem('num_surveys', JSON.stringify(all));
+ msg.textContent=`Saved locally (${all.length} total on this device). Export CSV/JSON to submit.`;
+};
+function dl(name, text, type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); }
+csv.onclick=()=>{
+ const all=JSON.parse(localStorage.getItem('num_surveys')||'[]');
+ if(!all.length) return msg.textContent='Nothing saved yet.';
+ const rows=[["role","faculty","dept","level","phone","at","pains","answers"]];
+ all.forEach(d=>rows.push([d.role,d.faculty,d.dept,d.level,d.phone,d.at,d.pains.join('|'),JSON.stringify(d.answers).replace(/"/g,'""')]));
+ dl('newgate_survey.csv', rows.map(r=>r.map(c=>`"${c||''}"`).join(',')).join('\n'), 'text/csv');
+};
+json.onclick=()=>dl('newgate_survey.json', localStorage.getItem('num_surveys')||'[]', 'application/json');
+// Future backend hook: POST collect() to /api/v1/survey when live.
+update();
+</script>
+</body>
+</html>
