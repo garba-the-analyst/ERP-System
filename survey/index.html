@@ -93,6 +93,9 @@ const checks=(id,q,opts,req)=>({id,q,type:"checks",opts,req:!!req});
 const num=(id,q,hint,req)=>({id,q,type:"num",hint,req:!!req});
 const freq=(id,q,req)=>({id,q,type:"freq",req:!!req});
 const sel=(id,q,opts,req)=>({id,q,type:"sel",opts,req:!!req});
+/* Backend inbox: ?api=https://your-server/api/v1/survey or saved override.
+   Empty = offline mode (browser + CSV/JSON into survey/responses/). */
+const SURVEY_API=new URLSearchParams(location.search).get('api')||localStorage.getItem('survey_api')||'';
 const PAGES={
  student:[
   {t:"1/5 Academic reality (quantified)",qs:[
@@ -252,7 +255,14 @@ function vDone(){
  <div class="row">${rows.join("")}</div>
  <div class="actions"><button class="ghost" id="bk">← Back</button><button class="primary" id="sv">Save response</button><button class="ghost" id="cs">Export CSV</button><button class="ghost" id="js">Export JSON</button></div><p><small id="m"></small></p></div>`;
  bk.onclick=()=>{S.page=PAGES[S.cat].length;vPage();};
- sv.onclick=()=>{const all=JSON.parse(localStorage.getItem('num_surveys')||'[]');all.push({cat:S.cat,...S.details,answers:S.answers,at:new Date().toISOString()});localStorage.setItem('num_surveys',JSON.stringify(all));m.textContent=`Saved locally (${all.length} on this device). Export CSV/JSON to submit.`;};
+ sv.onclick=async()=>{const payload={cat:S.cat,details:S.details,answers:S.answers,at:new Date().toISOString()};
+  const all=JSON.parse(localStorage.getItem('num_surveys')||'[]');all.push(payload);localStorage.setItem('num_surveys',JSON.stringify(all));
+  if(!SURVEY_API){m.textContent=`Saved on this device (${all.length}). No server configured — Export CSV/JSON into survey/responses/ or reopen with ?api=YOUR_SERVER/api/v1/survey.`;return;}
+  m.textContent='Sending to server…';
+  try{const r=await fetch(SURVEY_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+   if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();
+   m.textContent=`Saved to server (id ${j.id}). Also kept on this device (${all.length}).`;}
+  catch(err){m.textContent=`Server unreachable (${err.message}). Kept on this device (${all.length}) — export CSV/JSON instead.`;}};
  const dl=(n,t,ty)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:ty}));a.download=n;a.click();};
  cs.onclick=()=>{const all=JSON.parse(localStorage.getItem('num_surveys')||'[]');if(!all.length)return m.textContent='Nothing saved yet.';
   const keys=[...new Set(all.flatMap(o=>Object.keys(o)))];
